@@ -14,7 +14,10 @@ sealed interface Token {
         value class Boolean(val value: kotlin.Boolean) : Operand
 
         @JvmInline
-        value class Variable(val value: String) : Operand
+        value class Variable(val value: kotlin.String) : Operand
+
+        @JvmInline
+        value class String(val value: kotlin.String) : Operand
     }
 
     sealed interface Operator : Token {

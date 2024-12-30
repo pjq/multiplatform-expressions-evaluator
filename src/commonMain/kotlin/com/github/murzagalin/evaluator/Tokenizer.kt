@@ -10,6 +10,7 @@ internal class Tokenizer(
     companion object {
         private val digitChars = ('0'..'9').toSet()
         private val letterChars = ('A'..'Z').toSet() + ('a'..'z').toSet() + '_' + '$' + '@'
+        private val stringDelimiters = setOf('"', '\'')
     }
 
     private val functionsMap = functions.associateBy { it.name }
@@ -49,6 +50,7 @@ internal class Tokenizer(
         val symbol = str.first()
 
         return when {
+            symbol in stringDelimiters -> parseStringLiteral(str)
             str.startsWith("true") -> PUnit(Token.Operand.Boolean(true), 4)
             str.startsWith("false") -> PUnit(Token.Operand.Boolean(false), 5)
             str.startsWith("&&") -> PUnit(Token.Operator.And, 2)
@@ -139,6 +141,27 @@ internal class Tokenizer(
                 result.last() !is Token.Operand.Variable
     }
 
+    private fun parseStringLiteral(str: String): PUnit {
+        val delimiter = str.first()
+        var endIndex = 1
+        var escaped = false
+        
+        while (endIndex < str.length) {
+            if (!escaped && str[endIndex] == delimiter) {
+                break
+            }
+            if (str[endIndex] == '\\') {
+                escaped = !escaped
+            } else {
+                escaped = false
+            }
+            endIndex++
+        }
+        
+        val stringValue = str.substring(1, endIndex)
+        return PUnit(Token.Operand.String(stringValue), endIndex + 1)
+    }
+
     private data class PUnit(
         val tokens: List<Token>,
         val indexOffset: Int
@@ -146,5 +169,3 @@ internal class Tokenizer(
         constructor(token: Token, indexOffset: Int): this(listOf(token), indexOffset)
     }
 }
-
-

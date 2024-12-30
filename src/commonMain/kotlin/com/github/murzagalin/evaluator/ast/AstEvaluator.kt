@@ -1,3 +1,9 @@
+/**
+evaluator.evaluateString("length('hello')") // Returns 5.0
+evaluator.evaluateString("'hello' + ' world'") // Returns "hello world"
+evaluator.evaluateString("contains('hello world', 'world')") // Returns true
+evaluator.evaluateString("substring('hello', 1, 4)") // Returns "ell"
+*/
 package com.github.murzagalin.evaluator.ast
 
 import com.github.murzagalin.evaluator.Token
@@ -10,6 +16,7 @@ internal class AstEvaluator(private val values: Map<String, Any> = emptyMap()): 
     override fun visitTerminal(terminal: Expression.Terminal) = when(val operand = terminal.token) {
         is Token.Operand.Number -> operand.value
         is Token.Operand.Boolean -> operand.value
+        is Token.Operand.String -> operand.value
         is Token.Operand.Variable -> requireNotNull(values[operand.value]) {
             "Could not resolve variable '${operand.value}'"
         }
@@ -52,9 +59,18 @@ internal class AstEvaluator(private val values: Map<String, Any> = emptyMap()): 
             val right = evaluate(binary.rightExpression)
             left != right
         }
+        Token.Operator.Plus -> {
+            val left = evaluate(binary.leftExpression)
+            val right = evaluate(binary.rightExpression)
+            
+            when {
+                left is Number && right is Number -> left.toDouble() + right.toDouble()
+                left is String || right is String -> left.toString() + right.toString()
+                else -> throw IllegalArgumentException("Cannot add ${left::class.simpleName} and ${right::class.simpleName}")
+            }
+        }
         Token.Operator.And -> binaryOnBooleans(binary, "&&") { left, right -> left && right}
         Token.Operator.Or -> binaryOnBooleans(binary, "||") { left, right -> left || right}
-        Token.Operator.Plus -> binaryOnNumbers(binary, "+") { left, right -> left + right }
         Token.Operator.Minus -> binaryOnNumbers(binary,"-") { left, right -> left - right }
         Token.Operator.Modulo -> binaryOnNumbers(binary,"%") { left, right -> left % right }
         Token.Operator.Multiplication -> binaryOnNumbers(binary,"*") { left, right -> left * right }
@@ -65,21 +81,26 @@ internal class AstEvaluator(private val values: Map<String, Any> = emptyMap()): 
         }
     }
 
-
-    private fun binaryOnBooleans(binary: Expression.Binary, strRep: String, eval: (Boolean, Boolean) -> Any): Any {
+    private fun binaryOnBooleans(binary: Expression.Binary, operator: String, operation: (Boolean, Boolean) -> Boolean): Boolean {
         val left = evaluate(binary.leftExpression)
         val right = evaluate(binary.rightExpression)
-        require(left is Boolean && right is Boolean) { "'$strRep' must be called with boolean operands" }
 
-        return eval(left, right)
+        require(left is Boolean && right is Boolean) {
+            "$operator operator requires boolean operands, but got ${left::class.simpleName} and ${right::class.simpleName}"
+        }
+
+        return operation(left, right)
     }
 
-    private fun binaryOnNumbers(binary: Expression.Binary, strRep: String, eval: (Double, Double) -> Any): Any {
+    private fun binaryOnNumbers(binary: Expression.Binary, operator: String, operation: (Double, Double) -> Any): Any {
         val left = evaluate(binary.leftExpression)
         val right = evaluate(binary.rightExpression)
-        require(left is Number && right is Number) { "'$strRep' must be called with number operands" }
 
-        return eval(left.toDouble(), right.toDouble())
+        require(left is Number && right is Number) {
+            "$operator operator requires number operands, but got ${left::class.simpleName} and ${right::class.simpleName}"
+        }
+
+        return operation(left.toDouble(), right.toDouble())
     }
 
     override fun visitTernary(ternary: Expression.Ternary): Any {
