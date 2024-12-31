@@ -45,10 +45,10 @@ internal class AstEvaluator(private val values: Map<String, Any> = emptyMap()): 
     }
 
     override fun visitBinary(binary: Expression.Binary) = when (binary.token) {
-        Token.Operator.LessThan -> binaryOnNumbers(binary,"<") { left, right -> left < right }
-        Token.Operator.LessEqualThan -> binaryOnNumbers(binary,"<=") { left, right -> left <= right }
-        Token.Operator.GreaterThan -> binaryOnNumbers(binary,">") { left, right -> left > right }
-        Token.Operator.GreaterEqualThan -> binaryOnNumbers(binary,">=") { left, right -> left >= right }
+        Token.Operator.LessThan -> binaryOnComparable(binary,"<") { left, right -> left < right }
+        Token.Operator.LessEqualThan -> binaryOnComparable(binary,"<=") { left, right -> left <= right }
+        Token.Operator.GreaterThan -> binaryOnComparable(binary,">") { left, right -> left > right }
+        Token.Operator.GreaterEqualThan -> binaryOnComparable(binary,">=") { left, right -> left >= right }
         Token.Operator.Equal -> {
             val left = evaluate(binary.leftExpression)
             val right = evaluate(binary.rightExpression)
@@ -80,6 +80,27 @@ internal class AstEvaluator(private val values: Map<String, Any> = emptyMap()): 
             error("${binary.token} was incorrectly parsed as a binary operator")
         }
     }
+
+        private fun binaryOnComparable(binary: Expression.Binary, operator: String, operation: (Comparable<Any>, Comparable<Any>) -> Boolean): Boolean {
+        val left = evaluate(binary.leftExpression)
+        val right = evaluate(binary.rightExpression)
+
+        require(left is Comparable<*> && right is Comparable<*>) {
+            "$operator operator requires comparable operands, but got ${left::class.simpleName} and ${right::class.simpleName}"
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        return operation(left as Comparable<Any>, right as Comparable<Any>)
+    }
+
+//    override fun visitBinary(binary: Expression.Binary) = when (binary.token) {
+//        Token.Operator.LessThan -> binaryOnComparable(binary, "<") { left, right -> left < right }
+//        Token.Operator.LessEqualThan -> binaryOnComparable(binary, "<=") { left, right -> left <= right }
+//        Token.Operator.GreaterThan -> binaryOnComparable(binary, ">") { left, right -> left > right }
+//        Token.Operator.GreaterEqualThan -> binaryOnComparable(binary, ">=") { left, right -> left >= right }
+//        // ... rest of the existing implementation remains the same
+//        else -> super.visitBinary(binary)
+//    }
 
     private fun binaryOnBooleans(binary: Expression.Binary, operator: String, operation: (Boolean, Boolean) -> Boolean): Boolean {
         val left = evaluate(binary.leftExpression)

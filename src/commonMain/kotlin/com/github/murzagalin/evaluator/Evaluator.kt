@@ -2,6 +2,7 @@ package com.github.murzagalin.evaluator
 
 import com.github.murzagalin.evaluator.ast.BooleanAstEvaluator
 import com.github.murzagalin.evaluator.ast.DoubleAstEvaluator
+import com.github.murzagalin.evaluator.ast.StringAstEvaluator
 import com.github.murzagalin.evaluator.ast.Expression
 import com.github.murzagalin.evaluator.ast.Parser
 
@@ -14,6 +15,8 @@ class Evaluator(
 
     private val booleanEvaluator = BooleanAstEvaluator()
     private val doubleEvaluator = DoubleAstEvaluator()
+    private val stringAstEvaluator = StringAstEvaluator()
+
     private val parser = Parser()
     private val tokenizer = Tokenizer(
         functions = functions,
@@ -51,6 +54,23 @@ class Evaluator(
         expression: Expression,
         values: Map<String, Any> = emptyMap()
     ) = booleanEvaluator.evaluate(expression, values)
+
+     // Add evaluateString method
+    fun evaluateString(
+        expression: String,
+        values: Map<String, Any> = emptyMap()
+    ): String {
+        val tokenized = tokenizer.tokenize(expression)
+        val parsed = parser.parse(tokenized)
+
+        return stringAstEvaluator.evaluate(parsed, values)
+    }
+
+    // Optional: Add overload for Expression
+    fun evaluateString(
+        expression: Expression,
+        values: Map<String, Any> = emptyMap()
+    ) = stringAstEvaluator.evaluate(expression, values)
 
     fun preprocessExpression(expression: String): Expression {
         val tokenized = tokenizer.tokenize(expression)
